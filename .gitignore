@@ -55,3 +55,263 @@ __history/
 
 # Castalia statistics file
 *.stat
+
+unit sfc1;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, ExtCtrls, StdCtrls, DB, ADODB, Grids, DBGrids;
+
+type
+  TForm1 = class(TForm)
+    Edit1: TEdit;
+    Edit2: TEdit;
+    Label1: TLabel;
+    Label2: TLabel;
+    BTCheck: TButton;
+    Label3: TLabel;
+    Timer1: TTimer;
+    ADOConnection1: TADOConnection;
+    ADOQuery1: TADOQuery;
+    ADOQuery2: TADOQuery;
+    Edit3: TEdit;
+    Memo1: TMemo;
+    ComboBox1: TComboBox;
+    ComboBox2: TComboBox;
+    Button1: TButton;
+    Edit4: TEdit;
+    Edit5: TEdit;
+    Label4: TLabel;
+    Label5: TLabel;
+    Label6: TLabel;
+    Label7: TLabel;
+    Edit6: TEdit;
+    Button2: TButton;
+    Button3: TButton;
+    Label8: TLabel;
+    Edit7: TEdit;
+    Button4: TButton;
+    Button5: TButton;
+    DBGrid1: TDBGrid;
+    DataSource1: TDataSource;
+    procedure Timer1Timer(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure Edit1Change(Sender: TObject);
+    procedure BTCheckClick(Sender: TObject);
+    procedure Edit3KeyPress(Sender: TObject; var Key: Char);
+    procedure Edit1KeyPress(Sender: TObject; var Key: Char);
+    procedure Button1Click(Sender: TObject);
+    procedure Button3Click(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
+    procedure Button4Click(Sender: TObject);
+    procedure Button5Click(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  Form1: TForm1;
+
+implementation
+
+{$R *.dfm}
+
+procedure TForm1.Timer1Timer(Sender: TObject);
+begin
+  Label3.caption:=datetimetostr(now);
+end;
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+  Button5.Click;
+  ComboBox1.ItemIndex:=0;
+end;
+
+
+procedure TForm1.Edit1Change(Sender: TObject);
+begin
+  if length(edit1.text)>5 then
+    begin
+      edit2.text:='';
+      edit2.setfocus;
+    end;
+end;
+
+procedure TForm1.BTCheckClick(Sender: TObject);                                 //編號申請
+var
+  s:string;
+  i:integer;
+begin
+  ADOQuery1.close;                                                              //查詢當月編號
+  ADOQuery1.SQL.Clear;
+  ADOQuery1.SQL.add('select * from  BCSTE');
+  ADOQuery1.sql.add('where TE002>=:TE002');
+  ADOQuery1.sql.add('order by TE002');
+  ADOQuery1.Parameters.ParamByName('TE002').Value:=COPY(Label3.caption,1,4)+COPY(Label3.caption,6,2)+'0001';
+  ADOQuery1.OPEN;
+
+  IF ADOQuery1.RecordCount = 0 THEN                                             //無當月編號
+    BEGIN
+      s:=COPY(Label3.caption,1,4)+COPY(Label3.caption,6,2)+'0001';
+    end;
+
+  IF ADOQuery1.RecordCount > 0 THEN                                             //有當月編號
+    BEGIN
+      ADOQuery1.last;
+      s:=copy(ADOQuery1.FieldByName('TE002').Value,7,4);
+      i:=strtoint(s)+1;
+      if i<10 then                                                              //編號 1-9
+        begin
+          s:=COPY(Label3.caption,1,4)+COPY(Label3.caption,6,2)+'000'+inttostr(i);  
+        end;
+      if (i<100) and (i>9) then                                                 //編號 10-99
+        begin
+          s:=COPY(Label3.caption,1,4)+COPY(Label3.caption,6,2)+'00'+inttostr(i);   
+        end;
+      if (i<1000) and (i>99) then                                               //編號 100-999
+        begin
+          s:=COPY(Label3.caption,1,4)+COPY(Label3.caption,6,2)+'0'+inttostr(i);    
+        end;
+      if i>999 then                                                             //編號 1000-9999
+        begin
+          s:=COPY(Label3.caption,1,4)+COPY(Label3.caption,6,2)+inttostr(i);        
+        end;
+    END;
+
+  Edit5.text:=s;
+  Edit6.text:='';
+
+  ADOQuery1.close;                                                              //寫入編號檔 BCSTE
+  ADOQuery1.SQL.Clear;
+  ADOQuery1.SQL.add('insert into BCSTE (COMPANY,CREATOR,CREATE_DATE,TE001,TE002,TE005)');
+  ADOQuery1.sql.add('values (:COMPANY, :CREATOR, :CREATE_DATE, :TE001, :TE002, :TE005)');
+  ADOQuery1.Parameters.ParamByName('COMPANY').Value:= 'luckyfa';
+  ADOQuery1.Parameters.ParamByName('CREATOR').Value:= Edit1.Text;
+  ADOQuery1.Parameters.ParamByName('CREATE_DATE').Value:=COPY(Label3.caption,1,4)+COPY(Label3.caption,6,2)+COPY(Label3.caption,9,2);
+  ADOQuery1.Parameters.ParamByName('TE001').Value:='1';
+  ADOQuery1.Parameters.ParamByName('TE002').Value:=s;
+  ADOQuery1.Parameters.ParamByName('TE005').Value:=ComboBox1.itemindex;
+  ADOQuery1.ExecSQL;
+
+  Button4.Click;
+
+end;
+
+procedure TForm1.Edit3KeyPress(Sender: TObject; var Key: Char);                 //密碼輸入後執行登入
+begin
+ if key=#13 then
+  begin
+    Button3.Click;
+  end ;
+end;
+
+procedure TForm1.Edit1KeyPress(Sender: TObject; var Key: Char);                 //工號輸入後跳密碼
+begin
+ if key=#13 then
+  begin
+    if length(Edit1.text)=6 then
+       edit3.SetFocus;
+  end ;
+end;
+
+procedure TForm1.Button1Click(Sender: TObject);
+begin
+  Edit1.Text:='';
+  Edit2.Text:='';
+  Edit3.Text:='';
+  Edit4.Text:='';
+  Edit5.Text:='';
+  Edit6.Text:='';
+  Edit7.Text:='';
+end;
+
+procedure TForm1.Button3Click(Sender: TObject);                                 // AD 帳號密碼檢查
+var
+  user,password,domain: string;
+  phToken: cardinal;
+begin
+   user:=Edit1.text;
+   domain:='inventecenergy';
+   password:=Edit3.text;
+
+   if (Edit1.text<>'') and  (Edit3.text<>'') then
+     begin
+       if LogonUser(pChar(User), pChar(Domain), pChar(Password),
+          LOGON32_LOGON_NETWORK,LOGON32_PROVIDER_DEFAULT,phToken) then
+         begin
+           ShowMessage('Login ok');
+           BTCheck.enabled:=true;
+           Button2.enabled:=true;
+           Button5.enabled:=true;
+           Button3.enabled:=false;
+           Edit1.enabled:=false;
+           Edit3.enabled:=false;
+           Edit3.text:='';
+           Edit5.text:='';
+           Edit6.TEXT:='';
+         end
+      else
+        ShowMessage('Login fail');
+     end;
+   ADOQuery1.close;
+end;
+
+procedure TForm1.Button2Click(Sender: TObject);                                 //更新備註
+begin
+  ADOQuery1.close;
+  ADOQuery1.SQL.Clear;
+  ADOQuery1.SQL.add('update BCSTE ');
+  ADOQuery1.sql.add('set MODIFIER=:MODIFIER, MODI_DATE=:MODI_DATE, TE020=:TE020');
+  ADOQuery1.SQL.add('where TE002=:TE002');
+  ADOQuery1.Parameters.ParamByName('MODIFIER').Value:= Edit1.Text;
+  ADOQuery1.Parameters.ParamByName('MODI_DATE').Value:=COPY(Label3.caption,1,4)+COPY(Label3.caption,6,2)+COPY(Label3.caption,9,2);
+  ADOQuery1.Parameters.ParamByName('TE002').Value:= Edit5.Text;
+  ADOQuery1.Parameters.ParamByName('TE020').Value:= Edit6.Text;
+  ADOQuery1.ExecSQL;
+
+  Button4.Click;
+
+end;
+                                                                                  
+procedure TForm1.Button4Click(Sender: TObject);                                 //查詢編號相關欄位
+begin
+  Edit6.TEXT:='';
+  ADOQuery1.close;
+  ADOQuery1.SQL.Clear;
+  ADOQuery1.SQL.add('select TE002,TE005,CREATOR,CREATE_DATE,MODIFIER,MODI_DATE,TE020');
+  ADOQuery1.SQL.add('from BCSTE');
+  ADOQuery1.sql.add('where TE002=:TE002');
+  ADOQuery1.Parameters.ParamByName('TE002').Value:= Edit5.Text;
+  ADOQuery1.OPEN;
+  IF ADOQuery1.RecordCount > 0 THEN
+    BEGIN
+      if ADOQuery1.FieldByName('TE020').Value <> null  then
+         Edit6.TEXT:=ADOQuery1.FieldByName('TE020').Value;
+      ComboBox1.itemindex:=ADOQuery1.FieldByName('TE005').Value;
+    END;
+  IF ADOQuery1.RecordCount = 0 THEN
+    BEGIN
+      ShowMessage('無此編號');
+    END;
+end;
+
+procedure TForm1.Button5Click(Sender: TObject);                                 //登出清除帳號
+begin
+  Edit1.text:='';
+  Edit3.text:='';
+  Edit5.text:='';
+  Edit6.text:='';
+  Edit1.enabled:=true;
+  Edit3.enabled:=true;
+  Button3.enabled:=true;
+  BTCheck.enabled:=false;
+  Button2.enabled:=false;
+  Button5.enabled:=false;
+  ADOQuery1.close;
+end;
+
+end.
